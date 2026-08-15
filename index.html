@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tasks</title>
+<style>
+  :root {
+    color-scheme: light;
+    --surface:     #fcfcfb;
+    --plane:       #f9f9f7;
+    --ink:         #0b0b0b;
+    --ink-2:       #52514e;
+    --muted:       #898781;
+    --grid:        #e1e0d9;
+    --border:      rgba(11,11,11,0.10);
+    --good:        #0ca30c;
+    --warning:     #fab219;
+    --critical:    #d03b3b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --surface:   #1a1a19;
+      --plane:     #0d0d0d;
+      --ink:       #ffffff;
+      --ink-2:     #c3c2b7;
+      --muted:     #898781;
+      --grid:      #2c2c2a;
+      --border:    rgba(255,255,255,0.10);
+      --good:      #0ca30c;
+      --warning:   #fab219;
+      --critical:  #e66767;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 2rem 1.25rem 4rem;
+    background: var(--plane);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 780px; margin: 0 auto; }
+  h1 { font-size: 1.5rem; margin: 0 0 0.25rem; }
+  .subtitle { color: var(--ink-2); font-size: 0.9rem; margin: 0 0 1.5rem; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+  thead th {
+    text-align: left;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--grid);
+  }
+  tbody td {
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--grid);
+    vertical-align: top;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr.done td { color: var(--muted); }
+  tbody tr.done .task-text { text-decoration: line-through; }
+
+  .task-text { font-weight: 500; }
+  .owner {
+    display: inline-block;
+    color: var(--ink-2);
+    font-size: 0.85rem;
+  }
+  .deadline { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .badge { color: var(--ink-2); }
+  .badge .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .badge.overdue .dot { background: var(--critical); }
+  .badge.soon .dot { background: var(--warning); }
+  .badge.pending .dot { background: var(--muted); }
+  .badge.done .dot { background: var(--good); }
+
+  .empty {
+    padding: 3rem 1rem;
+    text-align: center;
+    color: var(--muted);
+  }
+  footer {
+    max-width: 780px;
+    margin: 1rem auto 0;
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Shared tasks</h1>
+    <p class="subtitle">Sorted by deadline. Updates every 15-30 minutes.</p>
+    <div class="card">
+      <table id="task-table">
+        <thead>
+          <tr>
+            <th>Status</th>
+            <th>Task</th>
+            <th>Owner</th>
+            <th>Deadline</th>
+          </tr>
+        </thead>
+        <tbody id="task-body"></tbody>
+      </table>
+      <div class="empty" id="empty-state" hidden>No tasks yet.</div>
+    </div>
+  </div>
+  <footer>Add tasks via the Telegram bot: <code>/add &lt;task&gt; @&lt;owner&gt; &lt;deadline&gt;</code></footer>
+
+<script>
+  const SOON_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+  function statusBadge(task) {
+    if (task.status === "done") {
+      return '<span class="badge done"><span class="dot"></span>Done</span>';
+    }
+    const deadline = new Date(task.deadline).getTime();
+    const now = Date.now();
+    if (deadline < now) {
+      return '<span class="badge overdue"><span class="dot"></span>Overdue</span>';
+    }
+    if (deadline - now <= SOON_WINDOW_MS) {
+      return '<span class="badge soon"><span class="dot"></span>Due soon</span>';
+    }
+    return '<span class="badge pending"><span class="dot"></span>Pending</span>';
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  fetch("./tasks.json", { cache: "no-store" })
+    .then((r) => r.json())
+    .then((tasks) => {
+      const body = document.getElementById("task-body");
+      const empty = document.getElementById("empty-state");
+      const table = document.getElementById("task-table");
+
+      if (!tasks.length) {
+        table.hidden = true;
+        empty.hidden = false;
+        return;
+      }
+
+      for (const task of tasks) {
+        const tr = document.createElement("tr");
+        if (task.status === "done") tr.className = "done";
+        tr.innerHTML = `
+          <td>${statusBadge(task)}</td>
+          <td class="task-text">${escapeHtml(task.text)}</td>
+          <td class="owner">@${escapeHtml(task.owner)}</td>
+          <td class="deadline">${escapeHtml(task.deadline_display)}</td>
+        `;
+        body.appendChild(tr);
+      }
+    })
+    .catch((err) => {
+      document.getElementById("empty-state").hidden = false;
+      document.getElementById("empty-state").textContent = "Couldn't load tasks.";
+      console.error(err);
+    });
+</script>
+</body>
+</html>
