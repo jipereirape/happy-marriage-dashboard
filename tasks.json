@@ -8,11 +8,35 @@
     "deadline_display": "Wed Aug 19, 00:00 PDT"
   },
   {
+    "id": 3,
+    "text": "pasaje Andrea",
+    "owner": "vicky",
+    "status": "pending",
+    "deadline": "2026-08-20T07:00:00+00:00",
+    "deadline_display": "Thu Aug 20, 00:00 PDT"
+  },
+  {
     "id": 1,
     "text": "pasaporte Olivia",
     "owner": "juan",
     "status": "pending",
     "deadline": "2026-08-21T22:00:00+00:00",
     "deadline_display": "Fri Aug 21, 15:00 PDT"
+  },
+  {
+    "id": 4,
+    "text": "pasajes LA",
+    "owner": "juan",
+    "status": "pending",
+    "deadline": "2026-08-28T07:00:00+00:00",
+    "deadline_display": "Fri Aug 28, 00:00 PDT"
+  },
+  {
+    "id": 5,
+    "text": "hotel LA",
+    "owner": "juan",
+    "status": "pending",
+    "deadline": "2026-09-08T07:00:00+00:00",
+    "deadline_display": "Tue Sep 08, 00:00 PDT"
   }
 ]
